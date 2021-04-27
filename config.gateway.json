@@ -1,0 +1,123 @@
+{
+    "firewall": {
+        "modify": {
+            "src_route": {
+                "rule": {
+                  "11": {
+                      "action": "accept",
+                      "description": "bypass_policy_route - Synology",
+                      "destination": {
+                          "address": "192.168.0.10"
+                      }
+                  },
+                  "12": {
+                      "action": "accept",
+                      "description": "bypass_policy_route - HomePod Mini",
+                      "destination": {
+                          "address": "192.168.0.100"
+                      }
+                  },
+                  "20": {
+                      "action": "modify",
+                      "description": "corporate_network to vti100",
+                      "modify": {
+                          "table": "1"
+                      },
+                      "source": {
+                          "group": {
+                              "network-group": "corporate_network"
+                          }
+                      }
+                  }
+                }
+            }
+        },
+        "options": {
+            "mss-clamp": {
+                "interface-type": [
+                    "pppoe",
+                    "pptp",
+                    "vti"
+                ],
+                "mss": "1350"
+            }
+        }
+    },
+    "interfaces": {
+        "ethernet": {
+            "eth0": {
+                "vif": {
+                  "40": {
+                    "firewall": {
+                        "in": {
+                            "modify": "src_route"
+                        }
+                    }
+                  }
+                }
+            }
+        },
+        "vti": {
+            "vti100": {
+                "description": "IPSec VTI interface"
+            }
+        }
+    },
+    "protocols": {
+        "static": {
+            "table": {
+                "1": {
+                    "interface-route": {
+                        "0.0.0.0/0": {
+                            "next-hop-interface": {
+                                "vti100": "''"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "service": {
+        "nat": {
+            "rule": {
+                "5000": {
+                    "description": "Masq corporate_network to vti100",
+                    "log": "disable",
+                    "outbound-interface": "vti100",
+                    "source": {
+                        "group": {
+                            "network-group": "corporate_network"
+                        }
+                    },
+                    "type": "masquerade"
+                }
+            }
+        }
+    },
+    "vpn": {
+        "ipsec": {
+            "auto-firewall-nat-exclude": "enable",
+            "include-ipsec-conf": "/config/ipsec/protonvpn.ipsec.conf",
+            "include-ipsec-secrets": "/config/ipsec/auth/protonvpn.ipsec.secrets"
+        }
+    },
+    "system": {
+        "task-scheduler": {
+            "task": {
+                "proton-check": {
+                    "executable": {
+                        "path": "/config/ipsec/protonvpn-check.sh"
+                    },
+                    "interval": "5m"
+                },
+                "proton-restart": {
+                    "executable": {
+                        "path": "/config/ipsec/protonvpn-restart.sh"
+                    },
+                    "crontab-spec": "1 5 * * *"
+                }
+            }
+        }
+    }
+}
